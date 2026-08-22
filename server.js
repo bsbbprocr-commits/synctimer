@@ -57,7 +57,8 @@ function createNewRoom(id, roomName = '') {
     },
     sharedNotes: {
       text: '',
-      todos: [] // [{ id, text, completed, createdBy, createdAt }]
+      todos: [], // [{ id, text, completed, priority, createdBy, createdAt }]
+      noteLines: [] // [{ id, content, author, timestamp }]
     },
     messages: [], // [{ id, senderId, senderName, text, timestamp }]
     participants: new Map(), // socketId -> { id, name, joinedAt }
@@ -413,6 +414,7 @@ io.on('connection', (socket) => {
     if (notesData) {
       if (notesData.text !== undefined) room.sharedNotes.text = String(notesData.text).slice(0, 5000);
       if (Array.isArray(notesData.todos)) room.sharedNotes.todos = notesData.todos.slice(0, 100);
+      if (Array.isArray(notesData.noteLines)) room.sharedNotes.noteLines = notesData.noteLines.slice(0, 100);
       room.lastActivity = Date.now();
 
       const user = room.participants.get(socket.id);

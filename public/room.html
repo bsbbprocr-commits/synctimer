@@ -477,16 +477,19 @@
     </div>
   </div>
 
-  <!-- Floating Notes & To-Do Corner Widget -->
+  <!-- Floating Large Notes & To-Do Window -->
   <div class="floating-widget notes-widget" id="notesWidget" style="display: none;">
     <div class="notes-header">
-      <div class="notes-tabs">
-        <button id="tabSharedNotes" class="notes-tab-btn active">👥 Ortak Notlar</button>
-        <button id="tabPersonalNotes" class="notes-tab-btn">👤 Kişisel Notlarım</button>
+      <div class="notes-header-left">
+        <span class="notes-icon">📝</span>
+        <div class="notes-tabs">
+          <button id="tabSharedNotes" class="notes-tab-btn active">👥 Ortak Notlar</button>
+          <button id="tabPersonalNotes" class="notes-tab-btn">👤 Kişisel Notlarım</button>
+        </div>
       </div>
       <div class="notes-header-actions">
-        <span class="badge-count" id="notesBadge">0</span>
-        <button id="btnMinimizeNotes" class="calc-head-btn" title="Küçült">
+        <span class="badge-count" id="notesBadge" title="Tamamlanan / Toplam Görev">0</span>
+        <button id="btnMinimizeNotes" class="calc-head-btn" title="Küçült / Büyüt">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
@@ -500,26 +503,67 @@
       </div>
     </div>
 
+    <!-- Search / Filter Bar -->
+    <div class="notes-toolbar">
+      <div class="notes-search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="notesSearchInput" placeholder="Notlarda ve görevlerde ara..." autocomplete="off">
+      </div>
+      <button id="btnClearCompletedTodos" class="btn-micro" title="Tamamlanan Görevleri Temizle">Temizle</button>
+    </div>
+
     <div class="notes-body">
-      <!-- To-Do Section -->
-      <div class="notes-section-title">
-        <span>Yapılacaklar & Görevler</span>
+      <!-- Section 1: Tasks / To-Do List -->
+      <div class="notes-section">
+        <div class="notes-section-header">
+          <span class="notes-section-title">✓ Yapılacaklar & Hedefler</span>
+        </div>
+
+        <form class="todo-form" id="todoForm">
+          <input type="text" id="todoInput" placeholder="Yeni yapılacak iş veya hedef yazın..." maxlength="300" autocomplete="off">
+          <select id="todoPrioritySelect" class="todo-priority-select" title="Öncelik">
+            <option value="normal">Normal</option>
+            <option value="high">🔥 Önemli</option>
+          </select>
+          <button type="submit" class="btn-add-todo" title="Görev Ekle">+</button>
+        </form>
+
+        <div class="todo-list" id="todoList">
+          <!-- Dynamic Todo Items -->
+        </div>
       </div>
 
-      <form class="todo-form" id="todoForm">
-        <input type="text" id="todoInput" placeholder="Yeni görev ekle..." maxlength="200" autocomplete="off">
-        <button type="submit" class="btn-add-todo" title="Ekle">+</button>
-      </form>
-
-      <div class="todo-list" id="todoList">
-        <!-- Dynamic Todo Items -->
+      <!-- Section 2: Multi-line Note Entries (Satır Notları) -->
+      <div class="notes-section" style="margin-top: 0.85rem;">
+        <div class="notes-section-header">
+          <span class="notes-section-title">📌 Not Satırları & Maddeler</span>
+          <button id="btnNewNoteLine" class="btn-micro btn-accent-micro" title="Yeni Satır Notu Ekle">+ Satır Ekle</button>
+        </div>
+        <div class="notelines-list" id="noteLinesList">
+          <!-- Dynamic Note Line Cards -->
+        </div>
       </div>
 
-      <!-- Freeform Scratchpad / Notebook -->
-      <div class="notes-section-title" style="margin-top: 0.85rem;">
-        <span>Not Defteri</span>
+      <!-- Section 3: Smart Ruled Line-Numbered Notepad -->
+      <div class="notes-section" style="margin-top: 0.85rem;">
+        <div class="notes-section-header">
+          <span class="notes-section-title">📄 Çizgili Not Defteri (Satır Numaralı)</span>
+        </div>
+        <div class="lined-notepad-wrapper">
+          <div class="line-numbers" id="notesLineNumbers">
+            <div>1</div>
+            <div>2</div>
+            <div>3</div>
+            <div>4</div>
+            <div>5</div>
+            <div>6</div>
+          </div>
+          <textarea id="notesTextarea" class="lined-notes-textarea" rows="6" placeholder="Serbest notlarınızı buraya satır satır yazın..."></textarea>
+        </div>
       </div>
-      <textarea id="notesTextarea" class="notes-textarea" rows="5" placeholder="Notlarınızı buraya yazın..."></textarea>
     </div>
   </div>
 

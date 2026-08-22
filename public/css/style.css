@@ -1750,19 +1750,23 @@ body.has-custom-bg .chat-msg-item.other .chat-msg-bubble {
   border-color: var(--accent-primary);
 }
 
-/* 2. Floating Notes & To-Do Corner Widget Styles */
+/* 2. Floating Notes & To-Do Window Styles (Large & Functional) */
 .notes-widget {
-  width: 340px;
-  bottom: 60px;
+  width: 480px;
+  top: 90px;
   right: 25px;
-  max-height: 520px;
+  max-height: 620px;
+  resize: both;
+  min-width: 320px;
+  min-height: 380px;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .notes-widget {
-    width: 94vw;
-    right: 3vw;
-    bottom: 50px;
+    width: 95vw;
+    right: 2.5vw;
+    top: 65px;
+    max-height: 80vh;
   }
 }
 
@@ -1770,39 +1774,125 @@ body.has-custom-bg .chat-msg-item.other .chat-msg-bubble {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.6rem 0.85rem;
-  background: rgba(0, 0, 0, 0.18);
+  padding: 0.65rem 0.95rem;
+  background: rgba(0, 0, 0, 0.22);
   border-bottom: 1px solid var(--border-color);
+  cursor: grab;
   user-select: none;
+}
+
+.notes-header:active {
+  cursor: grabbing;
+}
+
+.notes-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.notes-icon {
+  font-size: 1.1rem;
 }
 
 .notes-tabs {
   display: flex;
-  gap: 0.3rem;
+  gap: 0.35rem;
+  background: var(--bg-input);
+  padding: 0.2rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
 }
 
 .notes-tab-btn {
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   color: var(--text-secondary);
   font-size: 0.78rem;
   font-weight: 600;
-  padding: 0.3rem 0.6rem;
-  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .notes-tab-btn.active {
-  background: var(--bg-input);
+  background: var(--bg-card);
   color: var(--text-primary);
-  border-color: var(--border-color);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .notes-header-actions {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
+}
+
+/* Toolbar: Search & Clean */
+.notes-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.85rem;
+  background: rgba(0, 0, 0, 0.12);
+  border-bottom: 1px solid var(--border-color);
+  gap: 0.5rem;
+}
+
+.notes-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.55rem;
+  flex: 1;
+}
+
+.notes-search-wrap svg {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+}
+
+.notes-search-wrap input {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  outline: none;
+  width: 100%;
+}
+
+.btn-micro {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-micro:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+.btn-accent-micro {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #a5b4fc;
+}
+
+.btn-accent-micro:hover {
+  background: var(--accent-primary);
+  color: white;
 }
 
 .notes-body {
@@ -1810,7 +1900,19 @@ body.has-custom-bg .chat-msg-item.other .chat-msg-bubble {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  max-height: 440px;
+  flex: 1;
+}
+
+.notes-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.notes-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.45rem;
 }
 
 .notes-section-title {
@@ -1819,13 +1921,12 @@ body.has-custom-bg .chat-msg-item.other .chat-msg-bubble {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 0.45rem;
 }
 
 .todo-form {
   display: flex;
   gap: 0.35rem;
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.55rem;
 }
 
 .todo-form input {
@@ -1841,6 +1942,17 @@ body.has-custom-bg .chat-msg-item.other .chat-msg-bubble {
 
 .todo-form input:focus {
   border-color: var(--accent-primary);
+}
+
+.todo-priority-select {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  padding: 0 0.4rem;
+  outline: none;
+  cursor: pointer;
 }
 
 .btn-add-todo {
@@ -1867,7 +1979,7 @@ body.has-custom-bg .chat-msg-item.other .chat-msg-bubble {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  max-height: 150px;
+  max-height: 140px;
   overflow-y: auto;
   padding-right: 0.2rem;
 }
@@ -1876,7 +1988,7 @@ body.has-custom-bg .chat-msg-item.other .chat-msg-bubble {
   text-align: center;
   color: var(--text-muted);
   font-size: 0.78rem;
-  padding: 0.75rem 0;
+  padding: 0.65rem 0;
 }
 
 .todo-item {
@@ -1896,11 +2008,15 @@ body.has-custom-bg .chat-msg-item.other .chat-msg-bubble {
 }
 
 .todo-item.completed {
-  opacity: 0.55;
+  opacity: 0.5;
 }
 
 .todo-item.completed .todo-text {
   text-decoration: line-through;
+}
+
+.todo-item.priority-high {
+  border-left: 3px solid #ef4444;
 }
 
 .todo-checkbox-label {
@@ -1940,10 +2056,27 @@ body.has-custom-bg .chat-msg-item.other .chat-msg-bubble {
   font-weight: 700;
 }
 
+.todo-text-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  overflow: hidden;
+}
+
 .todo-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.priority-badge {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
 }
 
 .btn-del-todo {
@@ -1967,23 +2100,119 @@ body.has-custom-bg .chat-msg-item.other .chat-msg-bubble {
   height: 13px;
 }
 
-.notes-textarea {
-  width: 100%;
+/* Note Line Cards (Satır Notları) */
+.notelines-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 140px;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.noteline-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+  transition: all var(--transition-fast);
+}
+
+.noteline-card:hover {
+  border-color: var(--accent-primary);
+}
+
+.noteline-num {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  margin-top: 0.1rem;
+}
+
+.noteline-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.noteline-text {
+  color: var(--text-primary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.noteline-meta {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.btn-del-noteline {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.1rem;
+}
+
+.btn-del-noteline:hover {
+  color: var(--color-reset);
+}
+
+.btn-del-noteline svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Smart Ruled Notepad (Line-Numbered) */
+.lined-notepad-wrapper {
+  display: flex;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
+  overflow: hidden;
+  position: relative;
+}
+
+.line-numbers {
+  width: 32px;
+  padding: 0.6rem 0.3rem 0.6rem 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-right: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  text-align: right;
+  user-select: none;
+  overflow: hidden;
+}
+
+.lined-notes-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
   padding: 0.6rem 0.75rem;
   color: var(--text-primary);
   font-family: var(--font-ui);
-  font-size: 0.85rem;
-  line-height: 1.45;
+  font-size: 0.84rem;
+  line-height: 1.5;
   resize: vertical;
   outline: none;
-  min-height: 90px;
+  min-height: 110px;
+  background-image: linear-gradient(transparent, transparent calc(1.5em - 1px), rgba(255, 255, 255, 0.04) 1.5em);
+  background-size: 100% 1.5em;
 }
 
-.notes-textarea:focus {
-  border-color: var(--accent-primary);
+body.has-custom-bg .lined-notepad-wrapper,
+body.has-custom-bg .noteline-card,
+body.has-custom-bg .todo-item {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(16px);
 }
 
 /* Responsive adjustments */

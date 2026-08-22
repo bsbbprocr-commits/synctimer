@@ -113,6 +113,14 @@ class RoomExportManager {
 
       // Ortak Notlar ve Görevler
       fileContent += `## 👥 3. Ortak Notlar ve Görevler\n\n`;
+      if (sharedNotes.noteLines && sharedNotes.noteLines.length > 0) {
+        fileContent += `### 📌 Ortak Not Satırları:\n`;
+        sharedNotes.noteLines.forEach((l, i) => {
+          const lTime = new Date(l.timestamp).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+          fileContent += `${i + 1}. ${l.content} *(${l.author || 'Misafir'} • ${lTime})*\n`;
+        });
+        fileContent += `\n`;
+      }
       if (sharedNotes.text && sharedNotes.text.trim()) {
         fileContent += `### Ortak Not Defteri:\n\`\`\`\n${sharedNotes.text.trim()}\n\`\`\`\n\n`;
       }
@@ -121,7 +129,8 @@ class RoomExportManager {
         fileContent += `*Görev listesi boş.*\n\n`;
       } else {
         sharedNotes.todos.forEach(t => {
-          fileContent += `- [${t.completed ? 'x' : ' '}] ${t.text} *(Ekleyen: ${t.createdBy || 'Misafir'})*\n`;
+          const prio = t.priority === 'high' ? ' [ÖNEMLİ]' : '';
+          fileContent += `- [${t.completed ? 'x' : ' '}] ${t.text}${prio} *(Ekleyen: ${t.createdBy || 'Misafir'})*\n`;
         });
         fileContent += `\n`;
       }
@@ -130,6 +139,13 @@ class RoomExportManager {
 
       // Kişisel Notlar ve Görevler
       fileContent += `## 👤 4. Kişisel Notlarım & Görevlerim\n\n`;
+      if (personalNotes.noteLines && personalNotes.noteLines.length > 0) {
+        fileContent += `### 📌 Kişisel Not Satırları:\n`;
+        personalNotes.noteLines.forEach((l, i) => {
+          fileContent += `${i + 1}. ${l.content}\n`;
+        });
+        fileContent += `\n`;
+      }
       if (personalNotes.text && personalNotes.text.trim()) {
         fileContent += `### Kişisel Not Defteri:\n\`\`\`\n${personalNotes.text.trim()}\n\`\`\`\n\n`;
       }
@@ -138,7 +154,8 @@ class RoomExportManager {
         fileContent += `*Kişisel görev listesi boş.*\n\n`;
       } else {
         personalNotes.todos.forEach(t => {
-          fileContent += `- [${t.completed ? 'x' : ' '}] ${t.text}\n`;
+          const prio = t.priority === 'high' ? ' [ÖNEMLİ]' : '';
+          fileContent += `- [${t.completed ? 'x' : ' '}] ${t.text}${prio}\n`;
         });
         fileContent += `\n`;
       }
