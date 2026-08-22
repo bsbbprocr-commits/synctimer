@@ -347,6 +347,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Lap kaydedildiğinde (Sadece Kronometre)
   socket.on('lap-recorded', (data) => {
     if (!currentRoomState) return;
+    // Turları her iki yerde güncelle: stopwatch nesnesi + laps listesi
+    if (!currentRoomState.stopwatch) currentRoomState.stopwatch = {};
     currentRoomState.stopwatch.laps = data.laps;
     renderLaps(data.laps);
     soundEngine.playLap();
@@ -387,6 +389,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Canlı Chat Mesajı Alındığında
   socket.on('new-chat-message', (msg) => {
+    // currentRoomState.messages'a da ekle — export sırasında eksiksiz geçmiş için kritik
+    if (currentRoomState) {
+      if (!currentRoomState.messages) currentRoomState.messages = [];
+      currentRoomState.messages.push(msg);
+      // Belleği sınırla (max 500 mesaj client-side)
+      if (currentRoomState.messages.length > 500) {
+        currentRoomState.messages = currentRoomState.messages.slice(-500);
+      }
+    }
     appendChatMessage(msg, true);
   });
 
@@ -418,6 +429,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (liveActivityMessage) {
       liveActivityMessage.innerText = `${data.from}: ${data.emoji}`;
     }
+  });
+
+  // Ortak notlar güncellendiğinde currentRoomState'i de güncelle (export için kritik)
+  socket.on('shared-notes-updated', (data) => {
+    if (currentRoomState && data && data.sharedNotes) {
+      currentRoomState.sharedNotes = data.sharedNotes;
+    }
+    // notesManager kendi listener'ında da bunu işliyor, burada sadece state tutuyoruz
   });
 
   // 9. UI Render Fonksiyonları
