@@ -1,6 +1,6 @@
 /**
  * Timer Engine & Server Clock Sync Module
- * Drift-free, requestAnimationFrame tabanlı zamanlama ve Web Audio API ses motoru
+ * Drift-free, requestAnimationFrame tabanlı bağımsız Kronometre & Geri Sayım motoru
  */
 
 class ServerClock {
@@ -96,6 +96,11 @@ class SoundEngine {
     this.playBeep(523.25, 'sine', 0.08, 0.15); // C5
   }
 
+  playMessage() {
+    this.playBeep(987.77, 'sine', 0.06, 0.12); // B5
+    setTimeout(() => this.playBeep(1318.51, 'sine', 0.08, 0.12), 60); // E6
+  }
+
   playAlarm() {
     const playChord = (delay, f1, f2) => {
       setTimeout(() => {
@@ -118,35 +123,66 @@ class TimerEngine {
     this.onTick = onTick || (() => {});
     this.onFinish = onFinish || (() => {});
 
-    this.mode = 'stopwatch'; // 'stopwatch' | 'countdown'
-    this.state = 'idle';     // 'idle' | 'running' | 'paused' | 'finished'
-    this.startTimestamp = null;
-    this.elapsedBeforePause = 0;
-    this.countdownDuration = 300000; // 5 dk varsayılan
+    // Aktif Görüntülenen Mod: 'stopwatch' | 'countdown'
+    this.activeMode = 'stopwatch';
+
+    // 1. Bağımsız Kronometre Verisi
+    this.stopwatch = {
+      state: 'idle', // 'idle' | 'running' | 'paused'
+      startTimestamp: null,
+      elapsedBeforePause: 0,
+      laps: []
+    };
+
+    // 2. Bağımsız Geri Sayım Verisi
+    this.countdown = {
+      state: 'idle', // 'idle' | 'running' | 'paused' | 'finished'
+      startTimestamp: null,
+      elapsedBeforePause: 0,
+      duration: 300000 // 5 dk
+    };
 
     this.rafId = null;
   }
 
-  updateState(roomState) {
-    if (!roomState) return;
-
-    this.mode = roomState.mode || 'stopwatch';
-    this.state = roomState.state || 'idle';
-    this.startTimestamp = roomState.startTimestamp;
-    this.elapsedBeforePause = roomState.elapsedBeforePause || 0;
-    if (roomState.countdownDuration) {
-      this.countdownDuration = roomState.countdownDuration;
-    }
+  updateStopwatch(data) {
+    if (!data) return;
+    if (data.state !== undefined) this.stopwatch.state = data.state;
+    if (data.startTimestamp !== undefined) this.stopwatch.startTimestamp = data.startTimestamp;
+    if (data.elapsedBeforePause !== undefined) this.stopwatch.elapsedBeforePause = data.elapsedBeforePause;
+    if (data.laps !== undefined) this.stopwatch.laps = data.laps;
 
     this.checkLoop();
-    this.tick(); // Anında arayüzü güncelle
+    this.tick();
+  }
+
+  updateCountdown(data) {
+    if (!data) return;
+    if (data.state !== undefined) this.countdown.state = data.state;
+    if (data.startTimestamp !== undefined) this.countdown.startTimestamp = data.startTimestamp;
+    if (data.elapsedBeforePause !== undefined) this.countdown.elapsedBeforePause = data.elapsedBeforePause;
+    if (data.duration !== undefined) this.countdown.duration = data.duration;
+
+    this.checkLoop();
+    this.tick();
+  }
+
+  setActiveMode(mode) {
+    if (mode === 'stopwatch' || mode === 'countdown') {
+      this.activeMode = mode;
+      this.tick();
+    }
+  }
+
+  getActiveState() {
+    return this.activeMode === 'stopwatch' ? this.stopwatch.state : this.countdown.state;
   }
 
   startLoop() {
     if (this.rafId) return;
     const loop = () => {
       this.tick();
-      if (this.state === 'running') {
+      if (this.stopwatch.state === 'running' || this.countdown.state === 'running') {
         this.rafId = requestAnimationFrame(loop);
       } else {
         this.rafId = null;
@@ -163,7 +199,7 @@ class TimerEngine {
   }
 
   checkLoop() {
-    if (this.state === 'running') {
+    if (this.stopwatch.state === 'running' || this.countdown.state === 'running') {
       if (!this.rafId) this.startLoop();
     } else {
       this.stopLoop();
@@ -171,49 +207,68 @@ class TimerEngine {
     }
   }
 
-  getElapsed() {
-    if (this.state === 'idle') {
-      return 0;
-    }
-    let elapsed = this.elapsedBeforePause;
-    if (this.state === 'running' && this.startTimestamp) {
+  getStopwatchElapsed() {
+    if (this.stopwatch.state === 'idle') return 0;
+    let elapsed = this.stopwatch.elapsedBeforePause;
+    if (this.stopwatch.state === 'running' && this.stopwatch.startTimestamp) {
       const now = this.serverClock.now();
-      elapsed += Math.max(0, now - this.startTimestamp);
+      elapsed += Math.max(0, now - this.stopwatch.startTimestamp);
+    }
+    return elapsed;
+  }
+
+  getCountdownElapsed() {
+    if (this.countdown.state === 'idle') return 0;
+    let elapsed = this.countdown.elapsedBeforePause;
+    if (this.countdown.state === 'running' && this.countdown.startTimestamp) {
+      const now = this.serverClock.now();
+      elapsed += Math.max(0, now - this.countdown.startTimestamp);
     }
     return elapsed;
   }
 
   tick() {
-    const elapsed = this.getElapsed();
+    const swElapsed = this.getStopwatchElapsed();
+    const cdElapsed = this.getCountdownElapsed();
 
-    if (this.mode === 'stopwatch') {
-      const formatted = TimerEngine.formatTime(elapsed);
+    const cdDuration = this.countdown.duration || 300000;
+    const cdRemaining = Math.max(0, cdDuration - cdElapsed);
+    const cdPercent = cdDuration > 0 ? (cdRemaining / cdDuration) * 100 : 0;
+
+    // Geri sayım bitti mi kontrolü
+    if (this.countdown.state === 'running' && cdRemaining <= 0) {
+      this.countdown.state = 'finished';
+      this.onFinish();
+    }
+
+    if (this.activeMode === 'stopwatch') {
+      const formatted = TimerEngine.formatTime(swElapsed);
       this.onTick({
+        activeMode: 'stopwatch',
         formatted,
-        rawMs: elapsed,
-        mode: 'stopwatch',
-        state: this.state,
-        percent: 0
+        rawMs: swElapsed,
+        state: this.stopwatch.state,
+        percent: 0,
+        otherMode: {
+          mode: 'countdown',
+          state: this.countdown.state,
+          rawMs: cdRemaining
+        }
       });
     } else {
-      // Countdown modu
-      const remaining = Math.max(0, this.countdownDuration - elapsed);
-      const percent = this.countdownDuration > 0 ? (remaining / this.countdownDuration) * 100 : 0;
-      const formatted = TimerEngine.formatTime(remaining);
-
-      // Süre bitti mi kontrolü
-      if (this.state === 'running' && remaining <= 0) {
-        this.state = 'finished';
-        this.stopLoop();
-        this.onFinish();
-      }
-
+      const formatted = TimerEngine.formatTime(cdRemaining);
       this.onTick({
+        activeMode: 'countdown',
         formatted,
-        rawMs: remaining,
-        mode: 'countdown',
-        state: this.state,
-        percent
+        rawMs: cdRemaining,
+        state: this.countdown.state,
+        percent: cdPercent,
+        duration: cdDuration,
+        otherMode: {
+          mode: 'stopwatch',
+          state: this.stopwatch.state,
+          rawMs: swElapsed
+        }
       });
     }
   }

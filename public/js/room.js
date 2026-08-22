@@ -1,5 +1,8 @@
 /**
  * Room Controller & Real-Time Sync Logic
+ * - Independent Dual Timers (Stopwatch & Countdown never interfere)
+ * - Real-Time In-Room Live Chat
+ * - Animated Nature Backgrounds & Seamless Crossfades
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,7 +22,12 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('synctimer_username', userName);
   }
 
-  // 2. DOM Elemanları
+  // 2. Aktif Görüntülenen Mod ('stopwatch' | 'countdown')
+  let activeMode = (initialModeParam === 'countdown' || initialModeParam === 'stopwatch') 
+    ? initialModeParam 
+    : (localStorage.getItem('synctimer_active_mode') || 'stopwatch');
+
+  // 3. DOM Elemanları
   const displayRoomId = document.getElementById('displayRoomId');
   const btnCopyLink = document.getElementById('btnCopyLink');
   const btnModeStopwatch = document.getElementById('btnModeStopwatch');
@@ -40,16 +48,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnReset = document.getElementById('btnReset');
   const btnLap = document.getElementById('btnLap');
 
+  // Katılımcılar
   const participantsList = document.getElementById('participantsList');
   const participantCountBadge = document.getElementById('participantCountBadge');
   const editUserNameInput = document.getElementById('editUserNameInput');
   const btnSaveName = document.getElementById('btnSaveName');
 
+  // Chat Elemanları
+  const chatMessagesContainer = document.getElementById('chatMessagesContainer');
+  const chatEmptyState = document.getElementById('chatEmptyState');
+  const chatCountBadge = document.getElementById('chatCountBadge');
+  const chatForm = document.getElementById('chatForm');
+  const chatInput = document.getElementById('chatInput');
+
+  // Turlar
   const emptyLapsState = document.getElementById('emptyLapsState');
   const lapsTable = document.getElementById('lapsTable');
   const lapsTableBody = document.getElementById('lapsTableBody');
   const btnCopyLaps = document.getElementById('btnCopyLaps');
 
+  // Aktivite ve Tema
   const liveActivityMessage = document.getElementById('liveActivityMessage');
   const soundToggle = document.getElementById('soundToggle');
   const soundIconOn = document.getElementById('soundIconOn');
@@ -58,7 +76,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const themeIconDark = document.getElementById('themeIconDark');
   const themeIconLight = document.getElementById('themeIconLight');
 
-  // Süre seçici inputları
+  // Arka plan seçici
+  const natureBgCanvas = document.getElementById('natureBgCanvas');
+  const bgPickerToggle = document.getElementById('bgPickerToggle');
+  const bgPickerDropdown = document.getElementById('bgPickerDropdown');
+  const btnNextBg = document.getElementById('btnNextBg');
+  const bgOptionButtons = document.querySelectorAll('.bg-option-btn');
+
+  // Geri Sayım Süre Seçicileri
   const inputHours = document.getElementById('inputHours');
   const inputMinutes = document.getElementById('inputMinutes');
   const inputSeconds = document.getElementById('inputSeconds');
@@ -68,7 +93,65 @@ document.addEventListener('DOMContentLoaded', () => {
   displayRoomId.innerText = `ODA: ${roomId}`;
   if (editUserNameInput) editUserNameInput.value = userName;
 
-  // 3. Ses ve Tema Başlatma
+  // 4. Doğa Arka Plan Motoru (NatureBackgroundEngine)
+  let bgEngine = null;
+  if (natureBgCanvas && window.NatureBackgroundEngine) {
+    bgEngine = new NatureBackgroundEngine(natureBgCanvas);
+    const savedBg = localStorage.getItem('synctimer_bg') || 'none';
+    bgEngine.setScene(savedBg, false);
+    updateBgOptionUI(savedBg);
+  }
+
+  function updateBgOptionUI(activeBg) {
+    bgOptionButtons.forEach(btn => {
+      if (btn.getAttribute('data-bg') === activeBg) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+
+  if (bgPickerToggle && bgPickerDropdown) {
+    bgPickerToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isHidden = bgPickerDropdown.style.display === 'none';
+      bgPickerDropdown.style.display = isHidden ? 'block' : 'none';
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!bgPickerDropdown.contains(e.target) && !bgPickerToggle.contains(e.target)) {
+        bgPickerDropdown.style.display = 'none';
+      }
+    });
+
+    bgOptionButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const selectedBg = btn.getAttribute('data-bg');
+        if (bgEngine) {
+          bgEngine.setScene(selectedBg, true);
+          localStorage.setItem('synctimer_bg', selectedBg);
+          updateBgOptionUI(selectedBg);
+          showToast(`Arkaplan: ${btn.innerText.trim()}`);
+        }
+      });
+    });
+
+    if (btnNextBg && bgEngine) {
+      btnNextBg.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const scenes = bgEngine.scenes;
+        const currentIdx = scenes.indexOf(bgEngine.currentScene);
+        const nextScene = scenes[(currentIdx + 1) % scenes.length];
+        bgEngine.setScene(nextScene, true);
+        localStorage.setItem('synctimer_bg', nextScene);
+        updateBgOptionUI(nextScene);
+        showToast(`Doğa Geçişi: ${nextScene.toUpperCase()}`);
+      });
+    }
+  }
+
+  // 5. Ses ve Tema Başlatma
   const soundEngine = new SoundEngine();
   let soundEnabled = localStorage.getItem('synctimer_sound') !== 'false';
   updateSoundIcon();
@@ -113,9 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 4. Socket.io ve TimerEngine Kurulumu
-  // Eğer Vercel'de barındırılıyorsa Render/Railway backend URL'sini buraya yazabilirsiniz:
-  // Örn: const BACKEND_URL = 'https://synctimer-backend.onrender.com';
+  // 6. Socket.io ve Bağımsız TimerEngine Kurulumu
   const BACKEND_URL = window.SOCKET_SERVER_URL || undefined;
 
   const socket = io(BACKEND_URL, {
@@ -127,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const serverClock = new ServerClock(socket);
   let currentRoomState = null;
   let hasAlarmFired = false;
+  let totalChatCount = 0;
 
   const timerEngine = new TimerEngine(
     serverClock,
@@ -135,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
       displayMain.innerText = `${tickData.formatted.hours}:${tickData.formatted.minutes}:${tickData.formatted.seconds}`;
       displayHundredths.innerText = `.${tickData.formatted.hundredths}`;
 
-      if (tickData.mode === 'countdown') {
+      if (tickData.activeMode === 'countdown') {
         countdownProgressFill.style.width = `${Math.max(0, Math.min(100, tickData.percent))}%`;
       }
     },
@@ -145,12 +227,17 @@ document.addEventListener('DOMContentLoaded', () => {
         hasAlarmFired = true;
         socket.emit('timer-finished');
         soundEngine.playAlarm();
-        updateStateBadge('finished');
+        if (activeMode === 'countdown') {
+          updateStateBadge('finished');
+          updateControlsUI('finished');
+        }
       }
     }
   );
 
-  // 5. Socket Olayları ve Bağlantı Yönetimi
+  timerEngine.setActiveMode(activeMode);
+
+  // 7. Socket Olayları ve Bağlantı Yönetimi
   socket.on('connect', () => {
     statusDot.classList.remove('offline');
     syncLatencyText.innerText = 'Senkronize ediliyor...';
@@ -160,14 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.emit('join-room', { roomId, userName }, (response) => {
       if (response && response.success) {
         currentRoomState = response.roomState;
-        
-        // Eğer URL'den özel mod parametresi gelmişse ve oda idle ise uygula
-        if (initialModeParam && currentRoomState.state === 'idle' && currentRoomState.mode !== initialModeParam) {
-          socket.emit('set-mode', initialModeParam);
-        } else {
-          renderEntireState(currentRoomState);
-        }
-
+        renderEntireState(currentRoomState);
         updateLatencyDisplay();
       }
     });
@@ -190,79 +270,93 @@ document.addEventListener('DOMContentLoaded', () => {
     renderEntireState(state);
   });
 
-  // Zamanlayıcı durum değişimi (Start / Pause / Reset)
+  // Zamanlayıcı durum değişimi (Start / Pause / Reset) - Bağımsız Mod
   socket.on('timer-state-change', (data) => {
     if (!currentRoomState) return;
 
-    currentRoomState.state = data.state;
-    currentRoomState.startTimestamp = data.startTimestamp;
-    currentRoomState.elapsedBeforePause = data.elapsedBeforePause;
-    if (data.laps) currentRoomState.laps = data.laps;
+    const mode = data.mode || 'stopwatch';
+    if (mode === 'stopwatch') {
+      currentRoomState.stopwatch = {
+        state: data.state,
+        startTimestamp: data.startTimestamp,
+        elapsedBeforePause: data.elapsedBeforePause,
+        laps: data.laps !== undefined ? data.laps : currentRoomState.stopwatch.laps
+      };
+      timerEngine.updateStopwatch(currentRoomState.stopwatch);
+      if (data.laps !== undefined) {
+        renderLaps(currentRoomState.stopwatch.laps);
+      }
+    } else {
+      currentRoomState.countdown = {
+        state: data.state,
+        startTimestamp: data.startTimestamp,
+        elapsedBeforePause: data.elapsedBeforePause,
+        duration: data.duration !== undefined ? data.duration : currentRoomState.countdown.duration
+      };
+      timerEngine.updateCountdown(currentRoomState.countdown);
+    }
 
-    timerEngine.updateState(currentRoomState);
-    updateControlsUI(currentRoomState.state);
-    updateStateBadge(currentRoomState.state);
+    // Eğer aktif görüntülenen mod değiştiyse kontrolleri tazele
+    if (mode === activeMode) {
+      updateControlsUI(data.state);
+      updateStateBadge(data.state);
+    }
 
     if (data.action === 'start') {
       soundEngine.playStart();
-      hasAlarmFired = false;
+      if (mode === 'countdown') hasAlarmFired = false;
     } else if (data.action === 'pause') {
       soundEngine.playPause();
     } else if (data.action === 'reset') {
       soundEngine.playReset();
-      hasAlarmFired = false;
-      renderLaps(currentRoomState.laps || []);
+      if (mode === 'countdown') hasAlarmFired = false;
     }
   });
 
-  // Lap kaydedildiğinde
+  // Lap kaydedildiğinde (Sadece Kronometre)
   socket.on('lap-recorded', (data) => {
     if (!currentRoomState) return;
-    currentRoomState.laps = data.laps;
+    currentRoomState.stopwatch.laps = data.laps;
     renderLaps(data.laps);
     soundEngine.playLap();
     showToast(`Tur #${data.lap.id} kaydedildi: ${TimerEngine.formatTime(data.lap.lapTime).shortString}`);
   });
 
-  // Mod değiştiğinde
-  socket.on('room-mode-changed', (data) => {
-    if (!currentRoomState) return;
-    currentRoomState.mode = data.mode;
-    currentRoomState.state = data.state;
-    currentRoomState.elapsedBeforePause = data.elapsedBeforePause;
-    currentRoomState.countdownDuration = data.countdownDuration;
-    currentRoomState.laps = data.laps;
-
-    hasAlarmFired = false;
-    applyModeUI(data.mode);
-    timerEngine.updateState(currentRoomState);
-    updateControlsUI(currentRoomState.state);
-    updateStateBadge(currentRoomState.state);
-    renderLaps(currentRoomState.laps);
-  });
-
-  // Geri sayım süresi değiştiğinde
+  // Geri Sayım Süresi Değiştiğinde
   socket.on('countdown-duration-changed', (data) => {
     if (!currentRoomState) return;
-    currentRoomState.countdownDuration = data.countdownDuration;
-    currentRoomState.state = data.state;
-    currentRoomState.elapsedBeforePause = data.elapsedBeforePause;
+    currentRoomState.countdown.duration = data.duration;
+    currentRoomState.countdown.state = data.state;
+    currentRoomState.countdown.elapsedBeforePause = data.elapsedBeforePause;
+    currentRoomState.countdown.startTimestamp = null;
 
+    timerEngine.updateCountdown(currentRoomState.countdown);
+    syncDurationInputs(data.duration);
+
+    if (activeMode === 'countdown') {
+      updateControlsUI(data.state);
+      updateStateBadge(data.state);
+    }
     hasAlarmFired = false;
-    syncDurationInputs(data.countdownDuration);
-    timerEngine.updateState(currentRoomState);
-    updateControlsUI(currentRoomState.state);
-    updateStateBadge(currentRoomState.state);
   });
 
   // Geri sayım bittiğinde (Alarm)
   socket.on('timer-alarm', (data) => {
-    if (currentRoomState) currentRoomState.state = 'finished';
-    timerEngine.updateState(currentRoomState);
-    updateControlsUI('finished');
-    updateStateBadge('finished');
+    if (currentRoomState && currentRoomState.countdown) {
+      currentRoomState.countdown.state = 'finished';
+    }
+    timerEngine.updateCountdown({ state: 'finished' });
+    if (activeMode === 'countdown') {
+      updateControlsUI('finished');
+      updateStateBadge('finished');
+    }
     soundEngine.playAlarm();
     showToast('⏰ SÜRE DOLDU!', 'error');
+  });
+
+  // Canlı Chat Mesajı Alındığında
+  socket.on('new-chat-message', (msg) => {
+    appendChatMessage(msg, true);
   });
 
   // Katılımcı güncellemeleri
@@ -295,17 +389,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 6. UI Render Fonksiyonları
+  // 8. UI Render Fonksiyonları
   function renderEntireState(state) {
     if (!state) return;
 
-    applyModeUI(state.mode);
-    syncDurationInputs(state.countdownDuration);
-    timerEngine.updateState(state);
-    updateControlsUI(state.state);
-    updateStateBadge(state.state);
+    if (state.stopwatch) timerEngine.updateStopwatch(state.stopwatch);
+    if (state.countdown) timerEngine.updateCountdown(state.countdown);
+
+    applyModeUI(activeMode);
+
+    if (state.countdown) {
+      syncDurationInputs(state.countdown.duration);
+    }
+
+    const currentModeState = activeMode === 'stopwatch' 
+      ? (state.stopwatch ? state.stopwatch.state : 'idle')
+      : (state.countdown ? state.countdown.state : 'idle');
+
+    updateControlsUI(currentModeState);
+    updateStateBadge(currentModeState);
+
     renderParticipants(state.participants || []);
-    renderLaps(state.laps || []);
+    renderLaps(state.stopwatch ? state.stopwatch.laps : []);
+    renderAllChatMessages(state.messages || []);
     updateLatencyDisplay();
   }
 
@@ -323,6 +429,14 @@ document.addEventListener('DOMContentLoaded', () => {
       countdownProgressBar.style.display = 'none';
       btnLap.style.display = 'inline-flex';
     }
+
+    if (currentRoomState) {
+      const curState = mode === 'stopwatch'
+        ? (currentRoomState.stopwatch ? currentRoomState.stopwatch.state : 'idle')
+        : (currentRoomState.countdown ? currentRoomState.countdown.state : 'idle');
+      updateControlsUI(curState);
+      updateStateBadge(curState);
+    }
   }
 
   function updateControlsUI(state) {
@@ -330,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btnStart.disabled = true;
       btnPause.disabled = false;
       btnReset.disabled = false;
-      btnLap.disabled = false;
+      btnLap.disabled = activeMode !== 'stopwatch';
       btnStartText.innerText = 'Çalışıyor';
     } else if (state === 'paused') {
       btnStart.disabled = false;
@@ -356,14 +470,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateStateBadge(state) {
     timerStatePill.className = `timer-state-pill ${state}`;
+    const modeName = activeMode === 'stopwatch' ? 'KRONOMETRE' : 'GERİ SAYIM';
+
     if (state === 'running') {
-      timerStatePill.innerHTML = `<span>● CANLI</span>`;
+      timerStatePill.innerHTML = `<span>● ${modeName} CANLI</span>`;
     } else if (state === 'paused') {
-      timerStatePill.innerHTML = `<span>❚❚ DURAKLATILDI</span>`;
+      timerStatePill.innerHTML = `<span>❚❚ ${modeName} DURAKLATILDI</span>`;
     } else if (state === 'finished') {
       timerStatePill.innerHTML = `<span>🔔 SÜRE DOLDU</span>`;
     } else {
-      timerStatePill.innerHTML = `<span>HAZIR</span>`;
+      timerStatePill.innerHTML = `<span>${modeName} HAZIR</span>`;
     }
   }
 
@@ -403,7 +519,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCopyLaps.style.display = 'inline-flex';
     lapsTableBody.innerHTML = '';
 
-    // En hızlı ve en yavaş turları bul (en az 2 tur varsa)
     let minLapTime = Infinity;
     let maxLapTime = -Infinity;
 
@@ -414,7 +529,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Turları tersten (en son tur en üstte) göster
     [...laps].reverse().forEach((lap) => {
       const tr = document.createElement('tr');
       if (laps.length >= 2) {
@@ -435,8 +549,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Chat Render Fonksiyonları
+  function renderAllChatMessages(messages) {
+    chatMessagesContainer.innerHTML = '';
+    totalChatCount = messages.length;
+    chatCountBadge.innerText = `${totalChatCount} mesaj`;
+
+    if (!messages || messages.length === 0) {
+      chatEmptyState.style.display = 'block';
+      return;
+    }
+    chatEmptyState.style.display = 'none';
+
+    messages.forEach(msg => {
+      appendChatMessage(msg, false);
+    });
+
+    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+  }
+
+  function appendChatMessage(msg, playSound = true) {
+    if (chatEmptyState) chatEmptyState.style.display = 'none';
+
+    const isSelf = msg.senderId === socket.id;
+    const msgEl = document.createElement('div');
+    msgEl.className = `chat-msg-item ${isSelf ? 'self' : 'other'}`;
+
+    const date = new Date(msg.timestamp || Date.now());
+    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    msgEl.innerHTML = `
+      <div class="chat-msg-meta">
+        ${!isSelf ? `<span class="chat-msg-sender">${escapeHtml(msg.senderName)}</span>` : ''}
+        <span class="chat-msg-time">${timeStr}</span>
+      </div>
+      <div class="chat-msg-bubble">${escapeHtml(msg.text)}</div>
+    `;
+
+    chatMessagesContainer.appendChild(msgEl);
+    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+
+    totalChatCount++;
+    chatCountBadge.innerText = `${totalChatCount} mesaj`;
+
+    if (playSound && !isSelf) {
+      soundEngine.playMessage();
+    }
+  }
+
   function syncDurationInputs(ms) {
-    const totalSec = Math.floor(ms / 1000);
+    const totalSec = Math.floor((ms || 300000) / 1000);
     const h = Math.floor(totalSec / 3600);
     const m = Math.floor((totalSec % 3600) / 60);
     const s = totalSec % 60;
@@ -445,7 +607,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inputMinutes) inputMinutes.value = m;
     if (inputSeconds) inputSeconds.value = s;
 
-    // Preset chipleri güncelle
     presetChips.forEach(chip => {
       const chipSec = parseInt(chip.getAttribute('data-seconds'), 10);
       if (chipSec === totalSec) {
@@ -461,34 +622,44 @@ document.addEventListener('DOMContentLoaded', () => {
     syncLatencyText.innerText = `Senkronize (${ms}ms)`;
   }
 
-  // 7. Kullanıcı Etkileşim Butonları (Kontroller)
+  // 9. Kullanıcı Etkileşim Butonları (Kontroller)
   btnStart.addEventListener('click', () => {
     soundEngine.init();
-    socket.emit('timer-start');
+    socket.emit('timer-start', { mode: activeMode });
   });
 
   btnPause.addEventListener('click', () => {
-    socket.emit('timer-pause');
+    socket.emit('timer-pause', { mode: activeMode });
   });
 
   btnReset.addEventListener('click', () => {
-    socket.emit('timer-reset');
+    socket.emit('timer-reset', { mode: activeMode });
   });
 
   btnLap.addEventListener('click', () => {
-    socket.emit('timer-lap');
+    if (activeMode === 'stopwatch') {
+      socket.emit('timer-lap');
+    }
   });
 
-  // Mod Seçimi
+  // Mod Seçimi (Kronometre <-> Geri Sayım Bağımsız Geçiş)
   btnModeStopwatch.addEventListener('click', () => {
-    if (currentRoomState && currentRoomState.mode !== 'stopwatch') {
-      socket.emit('set-mode', 'stopwatch');
+    if (activeMode !== 'stopwatch') {
+      activeMode = 'stopwatch';
+      localStorage.setItem('synctimer_active_mode', activeMode);
+      timerEngine.setActiveMode(activeMode);
+      applyModeUI(activeMode);
+      showToast('Görünüm: Kronometre');
     }
   });
 
   btnModeCountdown.addEventListener('click', () => {
-    if (currentRoomState && currentRoomState.mode !== 'countdown') {
-      socket.emit('set-mode', 'countdown');
+    if (activeMode !== 'countdown') {
+      activeMode = 'countdown';
+      localStorage.setItem('synctimer_active_mode', activeMode);
+      timerEngine.setActiveMode(activeMode);
+      applyModeUI(activeMode);
+      showToast('Görünüm: Geri Sayım');
     }
   });
 
@@ -515,6 +686,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Chat Form Gönderme
+  if (chatForm && chatInput) {
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = chatInput.value.trim();
+      if (!text) return;
+
+      socket.emit('send-chat-message', text);
+      chatInput.value = '';
+      chatInput.focus();
+    });
+  }
+
   // İsim Değiştirme
   btnSaveName.addEventListener('click', () => {
     const newName = editUserNameInput.value.trim();
@@ -537,9 +721,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Turları Kopyala
   btnCopyLaps.addEventListener('click', () => {
-    if (!currentRoomState || !currentRoomState.laps || currentRoomState.laps.length === 0) return;
+    if (!currentRoomState || !currentRoomState.stopwatch || !currentRoomState.stopwatch.laps || currentRoomState.stopwatch.laps.length === 0) return;
     let text = `Oda ${roomId} - Tur Kayıtları:\n`;
-    currentRoomState.laps.forEach(l => {
+    currentRoomState.stopwatch.laps.forEach(l => {
       text += `Tur #${l.id}: ${TimerEngine.formatTime(l.lapTime).fullString} (Toplam: ${TimerEngine.formatTime(l.splitTime).fullString}) - ${l.recordedBy}\n`;
     });
     navigator.clipboard.writeText(text).then(() => {
@@ -562,7 +746,6 @@ document.addEventListener('DOMContentLoaded', () => {
     el.className = 'floating-emoji';
     el.innerText = emoji;
 
-    // Rastgele x pozisyonu
     const randomX = Math.floor(Math.random() * (window.innerWidth - 100)) + 50;
     el.style.left = `${randomX}px`;
     el.style.bottom = '80px';

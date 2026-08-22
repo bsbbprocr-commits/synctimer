@@ -36,16 +36,26 @@ function generateRoomId() {
 /**
  * Yeni bir oda nesnesi başlatır
  */
-function createNewRoom(id, roomName = '', initialMode = 'stopwatch', countdownDuration = 300000) {
+/**
+ * Yeni bir oda nesnesi başlatır - Kronometre ve Geri Sayım tamamen bağımsız çalışır
+ */
+function createNewRoom(id, roomName = '') {
   return {
     id,
     name: roomName || `Oda ${id}`,
-    mode: initialMode, // 'stopwatch' | 'countdown'
-    state: 'idle',     // 'idle' | 'running' | 'paused' | 'finished'
-    startTimestamp: null, // Zamanlayıcının başlatıldığı sunucu zamanı (ms)
-    elapsedBeforePause: 0, // Duraklatılmadan önce toplam geçen süre (ms)
-    countdownDuration: Number(countdownDuration) || 300000, // Varsayılan 5 dk (ms)
-    laps: [], // [{ id, lapTime, splitTime, recordedBy, timestamp }]
+    stopwatch: {
+      state: 'idle', // 'idle' | 'running' | 'paused'
+      startTimestamp: null,
+      elapsedBeforePause: 0,
+      laps: []
+    },
+    countdown: {
+      state: 'idle', // 'idle' | 'running' | 'paused' | 'finished'
+      startTimestamp: null,
+      elapsedBeforePause: 0,
+      duration: 300000 // 5 dakika varsayılan (ms)
+    },
+    messages: [], // [{ id, senderId, senderName, text, timestamp }]
     participants: new Map(), // socketId -> { id, name, joinedAt }
     createdAt: Date.now(),
     lastActivity: Date.now()
@@ -60,12 +70,9 @@ function getRoomPublicState(room) {
   return {
     id: room.id,
     name: room.name,
-    mode: room.mode,
-    state: room.state,
-    startTimestamp: room.startTimestamp,
-    elapsedBeforePause: room.elapsedBeforePause,
-    countdownDuration: room.countdownDuration,
-    laps: room.laps,
+    stopwatch: room.stopwatch,
+    countdown: room.countdown,
+    messages: room.messages.slice(-60), // Son 60 mesaj
     participants: participantsList,
     serverTime: Date.now()
   };
@@ -105,13 +112,13 @@ io.on('connection', (socket) => {
   });
 
   // 2. Oda Oluşturma
-  socket.on('create-room', ({ roomName, userName, mode, countdownDuration }, callback) => {
+  socket.on('create-room', ({ roomName, userName }, callback) => {
     let roomId = generateRoomId();
     while (rooms.has(roomId)) {
       roomId = generateRoomId();
     }
 
-    const room = createNewRoom(roomId, roomName, mode, countdownDuration);
+    const room = createNewRoom(roomId, roomName);
     rooms.set(roomId, room);
 
     currentRoomId = roomId;
@@ -170,101 +177,124 @@ io.on('connection', (socket) => {
     socket.to(cleanRoomId).emit('system-message', { text: `${user.name} odaya katıldı.`, type: 'info' });
   });
 
-  // 4. Zamanlayıcı Başlat / Devam Et (Start / Resume)
-  socket.on('timer-start', () => {
+  // 4. Zamanlayıcı Başlat / Devam Et (Start / Resume) - Bağımsız Mod
+  socket.on('timer-start', (payload) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room) return;
 
-    if (room.state !== 'running') {
-      room.state = 'running';
-      room.startTimestamp = Date.now();
+    const mode = (payload && payload.mode) === 'countdown' ? 'countdown' : 'stopwatch';
+    const targetTimer = room[mode];
+    if (!targetTimer) return;
+
+    if (targetTimer.state !== 'running') {
+      targetTimer.state = 'running';
+      targetTimer.startTimestamp = Date.now();
       room.lastActivity = Date.now();
 
       const user = room.participants.get(socket.id);
       const userName = user ? user.name : 'Bir kullanıcı';
+      const modeLabel = mode === 'countdown' ? 'Geri Sayımı' : 'Kronometreyi';
 
       io.to(currentRoomId).emit('timer-state-change', {
-        state: room.state,
-        startTimestamp: room.startTimestamp,
-        elapsedBeforePause: room.elapsedBeforePause,
+        mode,
+        state: targetTimer.state,
+        startTimestamp: targetTimer.startTimestamp,
+        elapsedBeforePause: targetTimer.elapsedBeforePause,
+        duration: targetTimer.duration,
         serverTime: Date.now(),
         action: 'start',
         by: userName
       });
-      io.to(currentRoomId).emit('system-message', { text: `${userName} başlattı.`, type: 'action' });
+      io.to(currentRoomId).emit('system-message', { text: `${userName} ${modeLabel} başlattı.`, type: 'action' });
     }
   });
 
-  // 5. Zamanlayıcı Duraklat (Pause)
-  socket.on('timer-pause', () => {
+  // 5. Zamanlayıcı Duraklat (Pause) - Bağımsız Mod
+  socket.on('timer-pause', (payload) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room) return;
 
-    if (room.state === 'running') {
+    const mode = (payload && payload.mode) === 'countdown' ? 'countdown' : 'stopwatch';
+    const targetTimer = room[mode];
+    if (!targetTimer) return;
+
+    if (targetTimer.state === 'running') {
       const now = Date.now();
-      room.elapsedBeforePause += (now - room.startTimestamp);
-      room.startTimestamp = null;
-      room.state = 'paused';
+      targetTimer.elapsedBeforePause += (now - targetTimer.startTimestamp);
+      targetTimer.startTimestamp = null;
+      targetTimer.state = 'paused';
       room.lastActivity = now;
 
       const user = room.participants.get(socket.id);
       const userName = user ? user.name : 'Bir kullanıcı';
+      const modeLabel = mode === 'countdown' ? 'Geri Sayımı' : 'Kronometreyi';
 
       io.to(currentRoomId).emit('timer-state-change', {
-        state: room.state,
+        mode,
+        state: targetTimer.state,
         startTimestamp: null,
-        elapsedBeforePause: room.elapsedBeforePause,
+        elapsedBeforePause: targetTimer.elapsedBeforePause,
+        duration: targetTimer.duration,
         serverTime: now,
         action: 'pause',
         by: userName
       });
-      io.to(currentRoomId).emit('system-message', { text: `${userName} duraklattı.`, type: 'action' });
+      io.to(currentRoomId).emit('system-message', { text: `${userName} ${modeLabel} duraklattı.`, type: 'action' });
     }
   });
 
-  // 6. Zamanlayıcı Sıfırla (Reset)
-  socket.on('timer-reset', () => {
+  // 6. Zamanlayıcı Sıfırla (Reset) - Bağımsız Mod
+  socket.on('timer-reset', (payload) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room) return;
 
-    room.state = 'idle';
-    room.startTimestamp = null;
-    room.elapsedBeforePause = 0;
-    room.laps = [];
+    const mode = (payload && payload.mode) === 'countdown' ? 'countdown' : 'stopwatch';
+    const targetTimer = room[mode];
+    if (!targetTimer) return;
+
+    targetTimer.state = 'idle';
+    targetTimer.startTimestamp = null;
+    targetTimer.elapsedBeforePause = 0;
+    if (mode === 'stopwatch') {
+      targetTimer.laps = [];
+    }
     room.lastActivity = Date.now();
 
     const user = room.participants.get(socket.id);
     const userName = user ? user.name : 'Bir kullanıcı';
+    const modeLabel = mode === 'countdown' ? 'Geri Sayımı' : 'Kronometreyi';
 
     io.to(currentRoomId).emit('timer-state-change', {
-      state: room.state,
+      mode,
+      state: targetTimer.state,
       startTimestamp: null,
       elapsedBeforePause: 0,
-      laps: [],
+      duration: targetTimer.duration,
+      laps: mode === 'stopwatch' ? [] : undefined,
       serverTime: Date.now(),
       action: 'reset',
       by: userName
     });
-    io.to(currentRoomId).emit('system-message', { text: `${userName} sıfırladı.`, type: 'action' });
+    io.to(currentRoomId).emit('system-message', { text: `${userName} ${modeLabel} sıfırladı.`, type: 'action' });
   });
 
-  // 7. Lap / Tur Zamanı Kaydı
+  // 7. Lap / Tur Zamanı Kaydı (Sadece Kronometre)
   socket.on('timer-lap', () => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
-    if (!room || room.state === 'idle') return;
+    if (!room || room.stopwatch.state === 'idle') return;
 
     const now = Date.now();
-    let currentTotalElapsed = room.elapsedBeforePause;
-    if (room.state === 'running' && room.startTimestamp) {
-      currentTotalElapsed += (now - room.startTimestamp);
+    let currentTotalElapsed = room.stopwatch.elapsedBeforePause;
+    if (room.stopwatch.state === 'running' && room.stopwatch.startTimestamp) {
+      currentTotalElapsed += (now - room.stopwatch.startTimestamp);
     }
 
-    const previousSplitTotal = room.laps.length > 0 
-      ? room.laps[room.laps.length - 1].splitTime 
+    const previousSplitTotal = room.stopwatch.laps.length > 0 
+      ? room.stopwatch.laps[room.stopwatch.laps.length - 1].splitTime 
       : 0;
     
     const lapDuration = Math.max(0, currentTotalElapsed - previousSplitTotal);
@@ -273,19 +303,19 @@ io.on('connection', (socket) => {
     const userName = user ? user.name : 'Bir kullanıcı';
 
     const newLap = {
-      id: room.laps.length + 1,
+      id: room.stopwatch.laps.length + 1,
       lapTime: lapDuration,
       splitTime: currentTotalElapsed,
       recordedBy: userName,
       timestamp: now
     };
 
-    room.laps.push(newLap);
+    room.stopwatch.laps.push(newLap);
     room.lastActivity = now;
 
     io.to(currentRoomId).emit('lap-recorded', {
       lap: newLap,
-      laps: room.laps
+      laps: room.stopwatch.laps
     });
     io.to(currentRoomId).emit('system-message', { 
       text: `${userName} Tur #${newLap.id} kaydetti.`, 
@@ -293,78 +323,80 @@ io.on('connection', (socket) => {
     });
   });
 
-  // 8. Mod Değiştir (Stopwatch <-> Countdown)
-  socket.on('set-mode', (newMode) => {
-    if (!currentRoomId) return;
-    const room = rooms.get(currentRoomId);
-    if (!room) return;
-    if (newMode !== 'stopwatch' && newMode !== 'countdown') return;
-
-    room.mode = newMode;
-    room.state = 'idle';
-    room.startTimestamp = null;
-    room.elapsedBeforePause = 0;
-    room.laps = [];
-    room.lastActivity = Date.now();
-
-    const user = room.participants.get(socket.id);
-    const userName = user ? user.name : 'Bir kullanıcı';
-
-    io.to(currentRoomId).emit('room-mode-changed', {
-      mode: room.mode,
-      state: room.state,
-      elapsedBeforePause: 0,
-      countdownDuration: room.countdownDuration,
-      laps: [],
-      by: userName
-    });
-    io.to(currentRoomId).emit('system-message', { 
-      text: `${userName} modu "${newMode === 'stopwatch' ? 'Kronometre' : 'Geri Sayım'}" yaptı.`, 
-      type: 'mode' 
-    });
-  });
-
-  // 9. Geri Sayım Süresini Ayarla
+  // 8. Geri Sayım Süresini Ayarla (Countdown duration)
   socket.on('set-countdown-duration', (durationMs) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
     if (!room) return;
 
     const duration = Math.max(1000, Math.min(86400000, Number(durationMs) || 60000));
-    room.countdownDuration = duration;
-    room.state = 'idle';
-    room.startTimestamp = null;
-    room.elapsedBeforePause = 0;
+    room.countdown.duration = duration;
+    room.countdown.state = 'idle';
+    room.countdown.startTimestamp = null;
+    room.countdown.elapsedBeforePause = 0;
     room.lastActivity = Date.now();
 
     const user = room.participants.get(socket.id);
     const userName = user ? user.name : 'Bir kullanıcı';
 
     io.to(currentRoomId).emit('countdown-duration-changed', {
-      countdownDuration: room.countdownDuration,
-      state: room.state,
+      duration: room.countdown.duration,
+      state: room.countdown.state,
       elapsedBeforePause: 0,
       by: userName
     });
   });
 
-  // 10. Geri Sayım Bittiğinde (Finished Alarm)
+  // 9. Geri Sayım Bittiğinde (Finished Alarm)
   socket.on('timer-finished', () => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);
-    if (!room || room.mode !== 'countdown') return;
+    if (!room) return;
 
-    if (room.state === 'running') {
-      room.state = 'finished';
-      room.startTimestamp = null;
-      room.elapsedBeforePause = room.countdownDuration;
-      room.lastActivity = Date.now();
+    if (room.countdown.state === 'running') {
+      const now = Date.now();
+      room.countdown.state = 'finished';
+      if (room.countdown.startTimestamp) {
+        room.countdown.elapsedBeforePause += (now - room.countdown.startTimestamp);
+      }
+      room.countdown.startTimestamp = null;
+      room.lastActivity = now;
 
       io.to(currentRoomId).emit('timer-alarm', {
+        mode: 'countdown',
         state: 'finished',
         message: 'Süre doldu!'
       });
     }
+  });
+
+  // 10. Canlı Sohbet Mesajı (Real-time Chat)
+  socket.on('send-chat-message', (text) => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room) return;
+
+    const trimmedText = (text || '').trim();
+    if (!trimmedText) return;
+
+    const user = room.participants.get(socket.id);
+    const userName = user ? user.name : 'Misafir';
+
+    const messageObj = {
+      id: Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
+      senderId: socket.id,
+      senderName: userName,
+      text: trimmedText.slice(0, 500), // Max 500 karakter
+      timestamp: Date.now()
+    };
+
+    room.messages.push(messageObj);
+    if (room.messages.length > 100) {
+      room.messages.shift();
+    }
+    room.lastActivity = Date.now();
+
+    io.to(currentRoomId).emit('new-chat-message', messageObj);
   });
 
   // 11. Hızlı Reaksiyon / Emoji

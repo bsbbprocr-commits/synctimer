@@ -9,6 +9,9 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%22100%22%20%22100%22><text y=%22.9em%22 font-size=%2290%22>⏱️</text></svg>">
 </head>
 <body>
+  <!-- Animated Nature Canvas Background -->
+  <canvas id="natureBgCanvas" class="nature-bg-canvas"></canvas>
+
   <div class="app-container">
     <!-- Header -->
     <header class="app-header">
@@ -23,6 +26,64 @@
       </a>
 
       <div class="header-actions">
+        <!-- Nature Background Picker Dropdown Toggle -->
+        <div class="bg-picker-wrapper">
+          <button id="bgPickerToggle" class="btn-icon btn-bg-toggle" title="Doğa Arkaplanı ve Görünüm" aria-label="Doğa Arkaplanı ve Görünüm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+            </svg>
+            <span class="btn-bg-label">Doğa Modu</span>
+          </button>
+
+          <!-- Background Selection Dropdown Menu -->
+          <div class="bg-picker-dropdown" id="bgPickerDropdown" style="display: none;">
+            <div class="bg-dropdown-header">
+              <span>🌿 Rahatlatıcı Arkaplan</span>
+              <button id="btnNextBg" class="btn-mini-action" title="Sonraki Sahneye Geç">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+                <span>Geçiş Yap</span>
+              </button>
+            </div>
+
+            <div class="bg-options-grid">
+              <button class="bg-option-btn active" data-bg="none">
+                <span class="bg-option-icon">⬛</span>
+                <span class="bg-option-title">Klasik</span>
+              </button>
+              <button class="bg-option-btn" data-bg="auto">
+                <span class="bg-option-icon">🔄</span>
+                <span class="bg-option-title">Otomatik Döngü</span>
+              </button>
+              <button class="bg-option-btn" data-bg="waves">
+                <span class="bg-option-icon">🌊</span>
+                <span class="bg-option-title">Okyanus Dalgaları</span>
+              </button>
+              <button class="bg-option-btn" data-bg="forest">
+                <span class="bg-option-icon">🌲</span>
+                <span class="bg-option-title">Mistik Orman</span>
+              </button>
+              <button class="bg-option-btn" data-bg="space">
+                <span class="bg-option-icon">🌌</span>
+                <span class="bg-option-title">Yıldızlı Gece & Aurora</span>
+              </button>
+              <button class="bg-option-btn" data-bg="sunset">
+                <span class="bg-option-icon">🌅</span>
+                <span class="bg-option-title">Sakin Gün Batımı</span>
+              </button>
+              <button class="bg-option-btn" data-bg="rain">
+                <span class="bg-option-icon">🌧️</span>
+                <span class="bg-option-title">Huzurlu Yağmur</span>
+              </button>
+            </div>
+
+            <div class="bg-dropdown-footer">
+              <span class="bg-hint">✨ Arkaplan seçildiğinde arayüz saydamlaşır</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Sound Toggle -->
         <button id="soundToggle" class="btn-icon" title="Sesi Aç/Kapat" aria-label="Sesi Aç/Kapat">
           <svg id="soundIconOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -176,7 +237,7 @@
       </div>
     </main>
 
-    <!-- Lower Grid Panels -->
+    <!-- Lower Grid Panels: Participants, Chat, and Laps -->
     <div class="panels-grid">
       <!-- Participants Panel -->
       <section class="panel-card">
@@ -203,8 +264,36 @@
         </div>
       </section>
 
+      <!-- Real-Time Chat Panel -->
+      <section class="panel-card chat-panel-card">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>Oda Sohbeti</span>
+          </div>
+          <span class="badge-count chat-badge" id="chatCountBadge">0 mesaj</span>
+        </div>
+
+        <div class="chat-messages-container" id="chatMessagesContainer">
+          <div class="chat-empty-state" id="chatEmptyState">Henüz mesaj yok. İlk mesajı siz yazın! 💬</div>
+          <!-- Dynamic chat messages -->
+        </div>
+
+        <form class="chat-input-form" id="chatForm">
+          <input type="text" id="chatInput" placeholder="Mesajınızı yazın..." maxlength="500" autocomplete="off">
+          <button type="submit" id="btnSendChat" class="btn-send-chat" title="Gönder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </form>
+      </section>
+
       <!-- Laps Record Panel -->
-      <section class="panel-card">
+      <section class="panel-card laps-panel-card">
         <div class="panel-header">
           <div class="panel-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -255,6 +344,7 @@
 
   <!-- Scripts (CDN + Local Fallback) -->
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script src="/js/background-engine.js"></script>
   <script src="/js/timer-engine.js"></script>
   <script src="/js/room.js"></script>
 </body>
