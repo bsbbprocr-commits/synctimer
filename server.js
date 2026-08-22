@@ -55,6 +55,10 @@ function createNewRoom(id, roomName = '') {
       elapsedBeforePause: 0,
       duration: 300000 // 5 dakika varsayılan (ms)
     },
+    sharedNotes: {
+      text: '',
+      todos: [] // [{ id, text, completed, createdBy, createdAt }]
+    },
     messages: [], // [{ id, senderId, senderName, text, timestamp }]
     participants: new Map(), // socketId -> { id, name, joinedAt }
     createdAt: Date.now(),
@@ -72,6 +76,7 @@ function getRoomPublicState(room) {
     name: room.name,
     stopwatch: room.stopwatch,
     countdown: room.countdown,
+    sharedNotes: room.sharedNotes,
     messages: room.messages.slice(-60), // Son 60 mesaj
     participants: participantsList,
     serverTime: Date.now()
@@ -399,7 +404,28 @@ io.on('connection', (socket) => {
     io.to(currentRoomId).emit('new-chat-message', messageObj);
   });
 
-  // 11. Hızlı Reaksiyon / Emoji
+  // 11. Ortak Notlar ve Görevler (Shared Notes & To-Do Sync)
+  socket.on('update-shared-notes', (notesData) => {
+    if (!currentRoomId) return;
+    const room = rooms.get(currentRoomId);
+    if (!room) return;
+
+    if (notesData) {
+      if (notesData.text !== undefined) room.sharedNotes.text = String(notesData.text).slice(0, 5000);
+      if (Array.isArray(notesData.todos)) room.sharedNotes.todos = notesData.todos.slice(0, 100);
+      room.lastActivity = Date.now();
+
+      const user = room.participants.get(socket.id);
+      const userName = user ? user.name : 'Bir kullanıcı';
+
+      socket.to(currentRoomId).emit('shared-notes-updated', {
+        sharedNotes: room.sharedNotes,
+        by: userName
+      });
+    }
+  });
+
+  // 12. Hızlı Reaksiyon / Emoji
   socket.on('send-reaction', (emoji) => {
     if (!currentRoomId) return;
     const room = rooms.get(currentRoomId);

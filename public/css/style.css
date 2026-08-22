@@ -1442,6 +1442,550 @@ body.has-custom-bg .chat-msg-item.other .chat-msg-bubble {
   background: rgba(255, 255, 255, 0.3);
 }
 
+/* ==========================================================================
+   Floating Widgets: Scientific Calculator & Notes / To-Do Corner
+   ========================================================================== */
+
+.floating-widget {
+  position: fixed;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: widgetPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes widgetPop {
+  from { opacity: 0; transform: scale(0.94) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.floating-widget.minimized .calc-body,
+.floating-widget.minimized .notes-body {
+  display: none !important;
+}
+
+/* 1. Scientific Calculator Styles */
+.calc-widget {
+  width: 380px;
+  top: 80px;
+  right: 25px;
+}
+
+@media (max-width: 480px) {
+  .calc-widget {
+    width: 94vw;
+    right: 3vw;
+    top: 70px;
+  }
+}
+
+.calc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.9rem;
+  background: rgba(0, 0, 0, 0.18);
+  border-bottom: 1px solid var(--border-color);
+  cursor: grab;
+  user-select: none;
+}
+
+.calc-header:active {
+  cursor: grabbing;
+}
+
+.calc-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.calc-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.calc-pill-btn {
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: var(--accent-primary);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.calc-pill-btn:hover {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.calc-head-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.calc-head-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.calc-head-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.calc-body {
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.calc-screen {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.85rem;
+  text-align: right;
+}
+
+.calc-expression {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  min-height: 1.1rem;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.calc-result {
+  font-family: var(--font-mono);
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: var(--digit-color);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.calc-keypad {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.3rem;
+}
+
+.calc-btn {
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.calc-btn:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.calc-btn:active {
+  transform: translateY(1px);
+}
+
+.calc-btn.btn-sci {
+  background: rgba(99, 102, 241, 0.1);
+  color: #a5b4fc;
+  font-size: 0.72rem;
+}
+
+.calc-btn.btn-sci:hover {
+  background: rgba(99, 102, 241, 0.25);
+  color: white;
+}
+
+.calc-btn.btn-mem {
+  background: rgba(16, 185, 129, 0.1);
+  color: #6ee7b7;
+  font-size: 0.7rem;
+}
+
+.calc-btn.btn-op {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.calc-btn.btn-danger {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+  font-weight: 700;
+}
+
+.calc-btn.btn-fn {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+}
+
+.calc-btn.btn-num {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.calc-btn.btn-equals {
+  grid-column: span 2;
+  aspect-ratio: auto;
+  background: var(--accent-primary);
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 700;
+  box-shadow: 0 2px 10px var(--accent-glow);
+}
+
+.calc-btn.btn-equals:hover {
+  background: var(--accent-primary-hover);
+}
+
+/* History Tape Drawer */
+.calc-history-drawer {
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.6rem;
+  font-size: 0.78rem;
+}
+
+.calc-history-drawer summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.calc-history-list {
+  max-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.calc-hist-row {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.calc-hist-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.calc-hist-exp {
+  color: var(--text-muted);
+}
+
+.calc-hist-res {
+  color: var(--accent-primary);
+  font-weight: 700;
+}
+
+.calc-hist-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 0.5rem 0;
+}
+
+.btn-tiny {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.btn-tiny:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+/* 2. Floating Notes & To-Do Corner Widget Styles */
+.notes-widget {
+  width: 340px;
+  bottom: 60px;
+  right: 25px;
+  max-height: 520px;
+}
+
+@media (max-width: 480px) {
+  .notes-widget {
+    width: 94vw;
+    right: 3vw;
+    bottom: 50px;
+  }
+}
+
+.notes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.85rem;
+  background: rgba(0, 0, 0, 0.18);
+  border-bottom: 1px solid var(--border-color);
+  user-select: none;
+}
+
+.notes-tabs {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.notes-tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.notes-tab-btn.active {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.notes-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.notes-body {
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: 440px;
+}
+
+.notes-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.45rem;
+}
+
+.todo-form {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+
+.todo-form input {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.65rem;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  outline: none;
+}
+
+.todo-form input:focus {
+  border-color: var(--accent-primary);
+}
+
+.btn-add-todo {
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-add-todo:hover {
+  background: var(--accent-primary-hover);
+}
+
+.todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 150px;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.todo-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  padding: 0.75rem 0;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  transition: all var(--transition-fast);
+}
+
+.todo-item:hover {
+  border-color: var(--border-focus);
+}
+
+.todo-item.completed {
+  opacity: 0.55;
+}
+
+.todo-item.completed .todo-text {
+  text-decoration: line-through;
+}
+
+.todo-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  flex: 1;
+  overflow: hidden;
+}
+
+.todo-checkbox-label input {
+  display: none;
+}
+
+.custom-checkbox {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.todo-checkbox-label input:checked + .custom-checkbox {
+  background: var(--color-start);
+  border-color: var(--color-start);
+}
+
+.todo-checkbox-label input:checked + .custom-checkbox::after {
+  content: '✓';
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.todo-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-del-todo {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.15rem;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-del-todo:hover {
+  color: var(--color-reset);
+}
+
+.btn-del-todo svg {
+  width: 13px;
+  height: 13px;
+}
+
+.notes-textarea {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.75rem;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  resize: vertical;
+  outline: none;
+  min-height: 90px;
+}
+
+.notes-textarea:focus {
+  border-color: var(--accent-primary);
+}
+
 /* Responsive adjustments */
 @media (max-width: 600px) {
   .room-bar {
@@ -1464,3 +2008,4 @@ body.has-custom-bg .chat-msg-item.other .chat-msg-bubble {
     min-height: 50px;
   }
 }
+

@@ -3,6 +3,9 @@
  * - Independent Dual Timers (Stopwatch & Countdown never interfere)
  * - Real-Time In-Room Live Chat
  * - Animated Nature Backgrounds & Seamless Crossfades
+ * - Floating Scientific Calculator
+ * - Shared & Personal Notes / To-Do Manager
+ * - Room Data Export (Chat, Timers, Notes)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -82,6 +85,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const bgPickerDropdown = document.getElementById('bgPickerDropdown');
   const btnNextBg = document.getElementById('btnNextBg');
   const bgOptionButtons = document.querySelectorAll('.bg-option-btn');
+
+  // Yeni Widget Butonları (Hesap Makinesi, Notlar, Dışa Aktar)
+  const btnToggleCalc = document.getElementById('btnToggleCalc');
+  const btnToggleNotes = document.getElementById('btnToggleNotes');
+  const btnExportData = document.getElementById('btnExportData');
 
   // Geri Sayım Süre Seçicileri
   const inputHours = document.getElementById('inputHours');
@@ -237,7 +245,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
   timerEngine.setActiveMode(activeMode);
 
-  // 7. Socket Olayları ve Bağlantı Yönetimi
+  // 7. Yüzen Bilimsel Hesap Makinesi ve Notlar Modülleri
+  let calc = null;
+  if (window.ScientificCalculator) {
+    calc = new ScientificCalculator('scientificCalcWidget');
+    if (btnToggleCalc) {
+      btnToggleCalc.addEventListener('click', () => calc.toggle());
+    }
+  }
+
+  let notesManager = null;
+  if (window.NotesManager) {
+    notesManager = new NotesManager(socket, 'notesWidget');
+    if (btnToggleNotes) {
+      btnToggleNotes.addEventListener('click', () => notesManager.toggle());
+    }
+  }
+
+  // Oda Arşivini İndirme
+  if (btnExportData && window.RoomExportManager) {
+    btnExportData.addEventListener('click', () => {
+      RoomExportManager.exportRoomData(currentRoomState, timerEngine, notesManager, 'markdown');
+    });
+  }
+
+  // 8. Socket Olayları ve Bağlantı Yönetimi
   socket.on('connect', () => {
     statusDot.classList.remove('offline');
     syncLatencyText.innerText = 'Senkronize ediliyor...';
@@ -296,7 +328,6 @@ document.addEventListener('DOMContentLoaded', () => {
       timerEngine.updateCountdown(currentRoomState.countdown);
     }
 
-    // Eğer aktif görüntülenen mod değiştiyse kontrolleri tazele
     if (mode === activeMode) {
       updateControlsUI(data.state);
       updateStateBadge(data.state);
@@ -389,7 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 8. UI Render Fonksiyonları
+  // 9. UI Render Fonksiyonları
   function renderEntireState(state) {
     if (!state) return;
 
@@ -412,6 +443,11 @@ document.addEventListener('DOMContentLoaded', () => {
     renderParticipants(state.participants || []);
     renderLaps(state.stopwatch ? state.stopwatch.laps : []);
     renderAllChatMessages(state.messages || []);
+
+    if (notesManager && state.sharedNotes) {
+      notesManager.setInitialSharedData(state.sharedNotes);
+    }
+
     updateLatencyDisplay();
   }
 
@@ -622,7 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
     syncLatencyText.innerText = `Senkronize (${ms}ms)`;
   }
 
-  // 9. Kullanıcı Etkileşim Butonları (Kontroller)
+  // 10. Kullanıcı Etkileşim Butonları (Kontroller)
   btnStart.addEventListener('click', () => {
     soundEngine.init();
     socket.emit('timer-start', { mode: activeMode });
