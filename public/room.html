@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oda | SyncTimer — Eş Zamanlı Sayaç</title>
+  <meta name="description" content="Gerçek zamanlı senkronize kronometre ve geri sayım odası.">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%22100%22%20%22100%22><text y=%22.9em%22 font-size=%2290%22>⏱️</text></svg>">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <a href="/" class="logo" title="Ana Sayfaya Dön">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+        <span>SyncTimer</span>
+      </a>
+
+      <div class="header-actions">
+        <!-- Sound Toggle -->
+        <button id="soundToggle" class="btn-icon" title="Sesi Aç/Kapat" aria-label="Sesi Aç/Kapat">
+          <svg id="soundIconOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <svg id="soundIconOff" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button id="themeToggle" class="btn-icon" title="Temayı Değiştir" aria-label="Temayı Değiştir">
+          <svg id="themeIconDark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <svg id="themeIconLight" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Room Top Info Bar -->
+    <div class="room-bar">
+      <div class="room-info-group">
+        <div class="room-badge" id="displayRoomId">ODA: ---</div>
+        <button id="btnCopyLink" class="btn-copy" title="Oda Linkini Kopyala">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+          <span>Linki Kopyala</span>
+        </button>
+      </div>
+
+      <!-- Mode Switcher -->
+      <div class="mode-switcher">
+        <button id="btnModeStopwatch" class="mode-btn active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>Kronometre</span>
+        </button>
+        <button id="btnModeCountdown" class="mode-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 22h14M5 2h14M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"></path>
+          </svg>
+          <span>Geri Sayım</span>
+        </button>
+      </div>
+
+      <!-- Sync Status -->
+      <div class="sync-status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="syncLatencyText">Bağlanıyor...</span>
+      </div>
+    </div>
+
+    <!-- Main Display & Controls Card -->
+    <main class="timer-hero-card">
+      <div class="countdown-progress-bar" id="countdownProgressBar">
+        <div class="countdown-progress-fill" id="countdownProgressFill"></div>
+      </div>
+
+      <!-- State Pill -->
+      <div class="timer-state-pill" id="timerStatePill">
+        <span>HAZIR</span>
+      </div>
+
+      <!-- Giant Digits -->
+      <div class="digits-container">
+        <div class="main-digits" id="displayMain">00:00:00</div>
+        <div class="sub-digits" id="displayHundredths">.00</div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="controls-wrapper">
+        <button id="btnStart" class="btn-control btn-start">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <span id="btnStartText">Başlat</span>
+        </button>
+
+        <button id="btnPause" class="btn-control btn-pause" disabled>
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
+          <span>Duraklat</span>
+        </button>
+
+        <button id="btnReset" class="btn-control btn-reset" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1 4 1 10 7 10"></polyline>
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+          </svg>
+          <span>Sıfırla</span>
+        </button>
+
+        <button id="btnLap" class="btn-control btn-lap" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+            <line x1="4" y1="22" x2="4" y2="15"></line>
+          </svg>
+          <span>Tur / Lap</span>
+        </button>
+      </div>
+
+      <!-- Countdown Duration Presets & Custom Configuration (Shown only in Countdown Mode) -->
+      <div class="countdown-config-card" id="countdownConfigCard" style="display: none;">
+        <div class="presets-container">
+          <button class="preset-chip" data-seconds="60">1 Dk</button>
+          <button class="preset-chip" data-seconds="180">3 Dk</button>
+          <button class="preset-chip active" data-seconds="300">5 Dk</button>
+          <button class="preset-chip" data-seconds="600">10 Dk</button>
+          <button class="preset-chip" data-seconds="900">15 Dk</button>
+          <button class="preset-chip" data-seconds="1500">25 Dk (Pomodoro)</button>
+          <button class="preset-chip" data-seconds="2700">45 Dk</button>
+        </div>
+
+        <div class="custom-time-inputs">
+          <div class="time-input-box">
+            <label>Saat</label>
+            <input type="number" id="inputHours" min="0" max="99" value="0">
+          </div>
+          <span class="time-sep">:</span>
+          <div class="time-input-box">
+            <label>Dakika</label>
+            <input type="number" id="inputMinutes" min="0" max="59" value="5">
+          </div>
+          <span class="time-sep">:</span>
+          <div class="time-input-box">
+            <label>Saniye</label>
+            <input type="number" id="inputSeconds" min="0" max="59" value="0">
+          </div>
+          <button id="btnApplyDuration" class="btn-apply-custom">Ayarla</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Lower Grid Panels -->
+    <div class="panels-grid">
+      <!-- Participants Panel -->
+      <section class="panel-card">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span>Katılımcılar</span>
+          </div>
+          <span class="badge-count" id="participantCountBadge">0</span>
+        </div>
+
+        <div class="participants-list" id="participantsList">
+          <!-- Dynamic list -->
+        </div>
+
+        <div class="name-edit-box">
+          <input type="text" id="editUserNameInput" placeholder="Adınızı değiştirin..." maxlength="30">
+          <button id="btnSaveName" class="btn-small">Kaydet</button>
+        </div>
+      </section>
+
+      <!-- Laps Record Panel -->
+      <section class="panel-card">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+              <line x1="4" y1="22" x2="4" y2="15"></line>
+            </svg>
+            <span>Tur / Lap Kayıtları</span>
+          </div>
+          <button id="btnCopyLaps" class="btn-small" style="display:none;" title="Tüm Turları Kopyala">Kopyala</button>
+        </div>
+
+        <div class="laps-container" id="lapsContainer">
+          <div class="empty-state" id="emptyLapsState">Henüz tur kaydedilmedi.</div>
+          <table class="laps-table" id="lapsTable" style="display: none;">
+            <thead>
+              <tr>
+                <th>Tur #</th>
+                <th>Tur Süresi</th>
+                <th>Toplam Süre</th>
+                <th>Kaydeden</th>
+              </tr>
+            </thead>
+            <tbody id="lapsTableBody">
+              <!-- Dynamic rows -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- Live Activity & Reactions Bar -->
+    <footer class="activity-bar">
+      <div class="activity-text">
+        <span id="liveActivityMessage">Odaya bağlanıldı.</span>
+      </div>
+
+      <div class="reactions-group">
+        <button class="btn-reaction" data-emoji="👏" title="Alkış">👏</button>
+        <button class="btn-reaction" data-emoji="🔥" title="Ateş">🔥</button>
+        <button class="btn-reaction" data-emoji="⚡" title="Yıldırım">⚡</button>
+        <button class="btn-reaction" data-emoji="🎉" title="Kutlama">🎉</button>
+        <button class="btn-reaction" data-emoji="🚀" title="Roket">🚀</button>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts (CDN + Local Fallback) -->
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script src="/js/timer-engine.js"></script>
+  <script src="/js/room.js"></script>
+</body>
+</html>

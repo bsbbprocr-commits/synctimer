@@ -1,0 +1,20 @@
+{
+  "name": "sync-timer",
+  "version": "1.0.0",
+  "description": "Gerçek Zamanlı Eş Zamanlı Kronometre ve Geri Sayım Uygulaması",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["stopwatch", "timer", "realtime", "socket.io", "sync"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
